@@ -10,31 +10,98 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="com.ashaevy.syncsound.MainActivity">
 
-    <Button
-        android:text="Start1"
+    <TextView
+        android:text="00:00:00"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:id="@+id/clock"
         android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"/>
+
+    <Button
+        android:text="Play all"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/play_all"
+        android:layout_below="@+id/clock"
+        android:layout_centerHorizontal="true" />
+
+    <TableLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/play_all"
         android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
-        android:id="@+id/start1" />
+        android:layout_alignParentStart="true">
 
-    <Button
-        android:text="Start2"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:layout_toRightOf="@+id/start1"
-        android:layout_toEndOf="@+id/start1"
-        android:id="@+id/start2" />
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" >
 
-    <Button
-        android:text="Start3"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:layout_toRightOf="@+id/start2"
-        android:layout_toEndOf="@+id/start2"
-        android:id="@+id/start3" />
+            <TextView
+                android:text="1.mp3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/textView2" />
+
+            <Button
+                android:text="Play1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/play1" />
+
+            <Button
+                android:text="Pause1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/pause1" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" >
+
+            <TextView
+                android:text="2.mp3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/textView3" />
+
+            <Button
+                android:text="Play2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/play2" />
+
+            <Button
+                android:text="Pause2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/pause2" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" >
+
+            <TextView
+                android:text="3.mp3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/textView4" />
+
+            <Button
+                android:text="Play3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/play3" />
+
+            <Button
+                android:text="Pause3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/pause3" />
+        </TableRow>
+
+    </TableLayout>
 
 </RelativeLayout>

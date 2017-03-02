@@ -7,6 +7,7 @@ import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
+import android.widget.TextView;
 
 import com.google.android.exoplayer2.DefaultLoadControl;
 import com.google.android.exoplayer2.ExoPlayerFactory;
@@ -23,12 +24,32 @@ import com.google.android.exoplayer2.upstream.FileDataSourceFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
     private SimpleExoPlayer[] mMediaPlayers = new SimpleExoPlayer[3];
     private Handler mMainHandler;
+
+    private Runnable updateTimeLine = new Runnable() {
+        @Override
+        public void run() {
+            if (MainActivity.this.isFinishing()) {
+                return;
+            }
+            long millis = mMediaPlayers[0].getCurrentPosition();
+            String hms = String.format(Locale.getDefault(), "%02d:%02d:%02d",
+                    TimeUnit.MILLISECONDS.toHours(millis),
+                    TimeUnit.MILLISECONDS.toMinutes(millis) -
+                            TimeUnit.HOURS.toMinutes(TimeUnit.MILLISECONDS.toHours(millis)),
+                    TimeUnit.MILLISECONDS.toSeconds(millis) -
+                            TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(millis)));
+            ((TextView) findViewById(R.id.clock)).setText(hms);
+            mMainHandler.postDelayed(updateTimeLine, 1000L);
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,26 +61,58 @@ public class MainActivity extends AppCompatActivity {
         mMediaPlayers[1] = createExoPlayer("music/hurricane.mp3");
         mMediaPlayers[2] = createExoPlayer("music/beep.mp3");
 
-        findViewById(R.id.start1).setOnClickListener(new View.OnClickListener() {
+        findViewById(R.id.play_all).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                invertPlayerState(mMediaPlayers[0]);
+                start(mMediaPlayers[0]);
+                start(mMediaPlayers[1]);
+                start(mMediaPlayers[2]);
             }
         });
 
-        findViewById(R.id.start2).setOnClickListener(new View.OnClickListener() {
+        findViewById(R.id.play1).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                invertPlayerState(mMediaPlayers[1]);
+                play(mMediaPlayers[0]);
             }
         });
 
-        findViewById(R.id.start3).setOnClickListener(new View.OnClickListener() {
+        findViewById(R.id.play2).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                invertPlayerState(mMediaPlayers[2]);
+                play(mMediaPlayers[1]);
             }
         });
+
+        findViewById(R.id.play3).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                play(mMediaPlayers[2]);
+            }
+        });
+
+        findViewById(R.id.pause1).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                pause(mMediaPlayers[0]);
+            }
+        });
+
+        findViewById(R.id.pause2).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                pause(mMediaPlayers[1]);
+            }
+        });
+
+        findViewById(R.id.pause3).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                pause(mMediaPlayers[2]);
+            }
+        });
+
+        mMainHandler.postDelayed(updateTimeLine, 1000L);
 
     }
 
@@ -106,13 +159,22 @@ public class MainActivity extends AppCompatActivity {
         return player;
     }
 
-    private void invertPlayerState(SimpleExoPlayer mediaPlayer) {
+    private void start(SimpleExoPlayer mediaPlayer) {
         if (!mediaPlayer.getPlayWhenReady()) {
             mediaPlayer.setPlayWhenReady(true);
-        } else {
-            mediaPlayer.setPlayWhenReady(false);
         }
 
+        if (mediaPlayer.getCurrentPosition() != 0) {
+            mediaPlayer.seekTo(0);
+        }
+    }
+
+    private void play(SimpleExoPlayer mediaPlayer) {
+        mediaPlayer.setVolume(1.0f);
+    }
+
+    private void pause(SimpleExoPlayer mediaPlayer) {
+        mediaPlayer.setVolume(0.0f);
     }
 
 }
