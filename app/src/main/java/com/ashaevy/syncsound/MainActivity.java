@@ -99,10 +99,13 @@ public class MainActivity extends AppCompatActivity {
         // in content do not change the layout size of the RecyclerView
         mRecyclerView.setHasFixedSize(true);
 
-        // use a linear layout manager
         mLayoutManager = new LinearLayoutManager(this);
         mRecyclerView.setLayoutManager(mLayoutManager);
 
+        mMediaPlayers = new ArrayList<>();
+
+        mAdapter = new MyAdapter(mMediaPlayers);
+        mRecyclerView.setAdapter(mAdapter);
 
         findViewById(R.id.play_all).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -124,7 +127,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        mMediaPlayers = new ArrayList<>();
 
         mMainHandler = new Handler();
         mMainHandler.post(updateTimeLine);
@@ -134,25 +136,23 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initPlayers() {
-        String downloadsPath = Environment.getExternalStoragePublicDirectory(Environment.
-                DIRECTORY_DOWNLOADS) + FILES_FOLDER_UNDER_DOWNLOADS;
-
-        File downloads = new File(downloadsPath);
-        File[] files = downloads.listFiles();
 
         // TODO do on background
-        for (int i = 0; i < files.length; i++) {
-            try {
-                mMediaPlayers.add(new SongPlayer(files[i].getName(),
-                        createExoPlayer(files[i].getCanonicalPath())));
-            } catch (IOException e) {
-                e.printStackTrace();
+        String folderPath = Environment.getExternalStoragePublicDirectory(Environment.
+                DIRECTORY_DOWNLOADS) + FILES_FOLDER_UNDER_DOWNLOADS;
+        File folderWithAudios = new File(folderPath);
+        File[] files = folderWithAudios.listFiles();
+        if (files != null) {
+            for (File file : files) {
+                try {
+                    mMediaPlayers.add(new SongPlayer(file.getName(),
+                            createExoPlayer(file.getCanonicalPath())));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         }
-
-        // specify an adapter (see also next example)
-        mAdapter = new MyAdapter(mMediaPlayers);
-        mRecyclerView.setAdapter(mAdapter);
+        mAdapter.notifyDataSetChanged();
     }
 
     private void requestPermissions() {
