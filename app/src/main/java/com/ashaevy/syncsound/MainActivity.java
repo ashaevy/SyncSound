@@ -1,10 +1,14 @@
 package com.ashaevy.syncsound;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -15,6 +19,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.exoplayer2.DefaultLoadControl;
 import com.google.android.exoplayer2.ExoPlayerFactory;
@@ -31,6 +36,7 @@ import com.google.android.exoplayer2.upstream.FileDataSourceFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
@@ -38,9 +44,9 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
     public static final String FILES_FOLDER_UNDER_DOWNLOADS = "/music/";
+    private static final int PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE = 0;
 
-    private int mPlayersCount;
-    private SongPlayer[] mMediaPlayers;
+    private ArrayList<SongPlayer> mMediaPlayers;
     private Handler mMainHandler;
 
     private long mGlobalClock;
@@ -72,9 +78,9 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateGlobalClock() {
         int playingCount = 0;
-        for (int i = 0; i < mMediaPlayers.length; i++) {
-            long currentPosition = mMediaPlayers[i].mPlayer.getCurrentPosition();
-            if (mMediaPlayers[i].mPlayer.getPlayWhenReady() && currentPosition > 0) {
+        for (int i = 0; i < mMediaPlayers.size(); i++) {
+            long currentPosition = mMediaPlayers.get(i).mPlayer.getCurrentPosition();
+            if (mMediaPlayers.get(i).mPlayer.getPlayWhenReady() && currentPosition > 0) {
                 mGlobalClock = currentPosition;
                 playingCount++;
             }
@@ -97,37 +103,12 @@ public class MainActivity extends AppCompatActivity {
         mLayoutManager = new LinearLayoutManager(this);
         mRecyclerView.setLayoutManager(mLayoutManager);
 
-        mMainHandler = new Handler();
-
-        // TODO check permissions
-        String downloadsPath = Environment.getExternalStoragePublicDirectory(Environment.
-                DIRECTORY_DOWNLOADS) + FILES_FOLDER_UNDER_DOWNLOADS;
-
-        File downloads = new File(downloadsPath);
-        File[] files = downloads.listFiles();
-        mPlayersCount = files.length;
-
-        mMediaPlayers = new SongPlayer[mPlayersCount];
-
-        // TODO do on background
-        for (int i = 0; i < mPlayersCount; i++) {
-            try {
-                mMediaPlayers[i] = new SongPlayer(files[i].getName(),
-                        createExoPlayer(files[i].getCanonicalPath()));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-        // specify an adapter (see also next example)
-        mAdapter = new MyAdapter(mMediaPlayers);
-        mRecyclerView.setAdapter(mAdapter);
 
         findViewById(R.id.play_all).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 mGlobalClock = 0;
-                for (int i = 0; i < mPlayersCount; i++) {
+                for (int i = 0; i < mMediaPlayers.size(); i++) {
                     start(i);
                 }
             }
@@ -137,14 +118,75 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 mGlobalClock = 0;
-                for (int i = 0; i < mPlayersCount; i++) {
+                for (int i = 0; i < mMediaPlayers.size(); i++) {
                     stop(i);
                 }
             }
         });
 
-        mMainHandler.postDelayed(updateTimeLine, 1000L);
+        mMediaPlayers = new ArrayList<>();
 
+        mMainHandler = new Handler();
+        mMainHandler.post(updateTimeLine);
+
+        requestPermissions();
+
+    }
+
+    private void initPlayers() {
+        String downloadsPath = Environment.getExternalStoragePublicDirectory(Environment.
+                DIRECTORY_DOWNLOADS) + FILES_FOLDER_UNDER_DOWNLOADS;
+
+        File downloads = new File(downloadsPath);
+        File[] files = downloads.listFiles();
+
+        // TODO do on background
+        for (int i = 0; i < files.length; i++) {
+            try {
+                mMediaPlayers.add(new SongPlayer(files[i].getName(),
+                        createExoPlayer(files[i].getCanonicalPath())));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        // specify an adapter (see also next example)
+        mAdapter = new MyAdapter(mMediaPlayers);
+        mRecyclerView.setAdapter(mAdapter);
+    }
+
+    private void requestPermissions() {
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.READ_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                    PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE);
+        } else {
+            initPlayers();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE: {
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+                    initPlayers();
+
+                } else {
+                    Toast.makeText(this, "You must grand permission to external storage, Exiting!",
+                            Toast.LENGTH_LONG).show();
+                    finish();
+                }
+            }
+
+        }
     }
 
     @Override
@@ -191,7 +233,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void start(int id) {
-        SimpleExoPlayer mediaPlayer = mMediaPlayers[id].mPlayer;
+        SimpleExoPlayer mediaPlayer = mMediaPlayers.get(id).mPlayer;
 
         if (!mediaPlayer.getPlayWhenReady()) {
             mediaPlayer.setPlayWhenReady(true);
@@ -203,7 +245,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void stop(int id) {
-        SimpleExoPlayer mediaPlayer = mMediaPlayers[id].mPlayer;
+        SimpleExoPlayer mediaPlayer = mMediaPlayers.get(id).mPlayer;
 
         if (mediaPlayer.getPlayWhenReady()) {
             mediaPlayer.setPlayWhenReady(false);
@@ -221,7 +263,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public static class MyAdapter extends RecyclerView.Adapter<MyAdapter.ViewHolder> {
-        private SongPlayer[] mSongPlayers;
+        private ArrayList<SongPlayer> mSongPlayers;
 
         public static class ViewHolder extends RecyclerView.ViewHolder {
             public TextView mSongNameView;
@@ -234,7 +276,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // Provide a suitable constructor (depends on the kind of dataset)
-        public MyAdapter(SongPlayer[] songPlayers) {
+        public MyAdapter(ArrayList<SongPlayer> songPlayers) {
             mSongPlayers = songPlayers;
         }
 
@@ -269,8 +311,8 @@ public class MainActivity extends AppCompatActivity {
         // Replace the contents of a view (invoked by the layout manager)
         @Override
         public void onBindViewHolder(ViewHolder holder, int position) {
-            holder.mSongNameView.setText(mSongPlayers[position].mSongName);
-            float volume = mSongPlayers[position].mPlayer.getVolume();
+            holder.mSongNameView.setText(mSongPlayers.get(position).mSongName);
+            float volume = mSongPlayers.get(position).mPlayer.getVolume();
             if (volume > 0f) {
                 holder.mPlayButton.setEnabled(false);
                 holder.mPauseButton.setEnabled(true);
@@ -283,17 +325,17 @@ public class MainActivity extends AppCompatActivity {
         // Return the size of your dataset (invoked by the layout manager)
         @Override
         public int getItemCount() {
-            return mSongPlayers.length;
+            return mSongPlayers.size();
         }
 
         private void play(int id) {
-            SimpleExoPlayer mediaPlayer = mSongPlayers[id].mPlayer;
+            SimpleExoPlayer mediaPlayer = mSongPlayers.get(id).mPlayer;
             mediaPlayer.setVolume(1.0f);
             notifyItemChanged(id);
         }
 
         private void pause(int id) {
-            SimpleExoPlayer mediaPlayer = mSongPlayers[id].mPlayer;
+            SimpleExoPlayer mediaPlayer = mSongPlayers.get(id).mPlayer;
             mediaPlayer.setVolume(.0f);
             notifyItemChanged(id);
         }
