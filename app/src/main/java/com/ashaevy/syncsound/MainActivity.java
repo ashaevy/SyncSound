@@ -8,10 +8,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.LoaderManager;
-import android.support.v4.content.AsyncTaskLoader;
 import android.support.v4.content.ContextCompat;
-import android.support.v4.content.Loader;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -43,8 +40,7 @@ import java.util.ArrayList;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
-public class MainActivity extends AppCompatActivity implements
-        LoaderManager.LoaderCallbacks<Void> {
+public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
     public static final String FILES_FOLDER_UNDER_DOWNLOADS = "/music/";
@@ -139,39 +135,6 @@ public class MainActivity extends AppCompatActivity implements
 
     }
 
-    @Override
-    public Loader<Void> onCreateLoader(int id, Bundle args) {
-        return new AsyncTaskLoader<Void>(this) {
-            @Override
-            public Void loadInBackground() {
-
-                for (SongPlayer player: mMediaPlayers) {
-                    ExtractorMediaSource extractorMediaSource =
-                            createMediaSource(player.mSongFileCanonicalName);
-                    player.mPlayer.prepare(extractorMediaSource);
-
-                }
-
-                return null;
-            }
-
-            @Override
-            protected void onStartLoading() {
-                forceLoad();
-            }
-        };
-    }
-
-    @Override
-    public void onLoaderReset(Loader<Void> loader) {
-
-    }
-
-    @Override
-    public void onLoadFinished(Loader<Void> loader, Void data) {
-        mAdapter.notifyDataSetChanged();
-    }
-
     private void initPlayers() {
         String folderPath = Environment.getExternalStoragePublicDirectory(Environment.
                 DIRECTORY_DOWNLOADS) + FILES_FOLDER_UNDER_DOWNLOADS;
@@ -188,7 +151,20 @@ public class MainActivity extends AppCompatActivity implements
             }
         }
 
-        getSupportLoaderManager().initLoader(0, null, this);
+        // do heavy work on background
+        new Thread() {
+            @Override
+            public void run() {
+                for (SongPlayer player: mMediaPlayers) {
+                    if (!MainActivity.this.isFinishing()) {
+                        ExtractorMediaSource extractorMediaSource =
+                                createMediaSource(player.mSongFileCanonicalName);
+                        player.mPlayer.prepare(extractorMediaSource);
+                    }
+                }
+            }
+        }.start();
+
     }
 
     private void requestPermissions() {
@@ -228,10 +204,8 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (isFinishing()) {
-            for (SongPlayer player: mMediaPlayers) {
-                player.mPlayer.release();
-            }
+        for (SongPlayer player: mMediaPlayers) {
+            player.mPlayer.release();
         }
     }
 
