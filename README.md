@@ -1,3 +1,3 @@
 # SyncSound
 
-Simple project that allows to play multiple songs at same time from Downloads/music folder.
+Simple project that allows to play multiple songs at same time from Downloads/music folder via ExoPlayer.
