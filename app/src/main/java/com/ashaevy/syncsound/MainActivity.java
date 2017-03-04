@@ -8,7 +8,10 @@ import android.os.Environment;
 import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.AsyncTaskLoader;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.content.Loader;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -40,7 +43,8 @@ import java.util.ArrayList;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements
+        LoaderManager.LoaderCallbacks<Void> {
 
     private static final String TAG = "MainActivity";
     public static final String FILES_FOLDER_UNDER_DOWNLOADS = "/music/";
@@ -135,9 +139,40 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    private void initPlayers() {
+    @Override
+    public Loader<Void> onCreateLoader(int id, Bundle args) {
+        return new AsyncTaskLoader<Void>(this) {
+            @Override
+            public Void loadInBackground() {
 
-        // TODO do on background
+                for (SongPlayer player: mMediaPlayers) {
+                    ExtractorMediaSource extractorMediaSource =
+                            createMediaSource(player.mSongFileCanonicalName);
+                    player.mPlayer.prepare(extractorMediaSource);
+
+                }
+
+                return null;
+            }
+
+            @Override
+            protected void onStartLoading() {
+                forceLoad();
+            }
+        };
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Void> loader) {
+
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Void> loader, Void data) {
+        mAdapter.notifyDataSetChanged();
+    }
+
+    private void initPlayers() {
         String folderPath = Environment.getExternalStoragePublicDirectory(Environment.
                 DIRECTORY_DOWNLOADS) + FILES_FOLDER_UNDER_DOWNLOADS;
         File folderWithAudios = new File(folderPath);
@@ -146,13 +181,14 @@ public class MainActivity extends AppCompatActivity {
             for (File file : files) {
                 try {
                     mMediaPlayers.add(new SongPlayer(file.getName(),
-                            createExoPlayer(file.getCanonicalPath())));
+                            createExoPlayer(), file.getCanonicalPath()));
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             }
         }
-        mAdapter.notifyDataSetChanged();
+
+        getSupportLoaderManager().initLoader(0, null, this);
     }
 
     private void requestPermissions() {
@@ -192,12 +228,14 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        for (SongPlayer player: mMediaPlayers) {
-            player.mPlayer.release();
+        if (isFinishing()) {
+            for (SongPlayer player: mMediaPlayers) {
+                player.mPlayer.release();
+            }
         }
     }
 
-    private SimpleExoPlayer createExoPlayer(String fileName) {
+    private SimpleExoPlayer createExoPlayer() {
         // 1. Create a default TrackSelector
         TrackSelection.Factory videoTrackSelectionFactory =
                 new AdaptiveVideoTrackSelection.Factory(BANDWIDTH_METER);
@@ -208,13 +246,7 @@ public class MainActivity extends AppCompatActivity {
         LoadControl loadControl = new DefaultLoadControl();
 
         // 3. Create the player
-        SimpleExoPlayer player =
-                ExoPlayerFactory.newSimpleInstance(this, trackSelector, loadControl);
-        ExtractorMediaSource extractorMediaSource = createMediaSource(fileName);
-
-        player.prepare(extractorMediaSource);
-
-        return player;
+        return ExoPlayerFactory.newSimpleInstance(this, trackSelector, loadControl);
     }
 
     @NonNull
@@ -254,11 +286,13 @@ public class MainActivity extends AppCompatActivity {
 
     public static class SongPlayer {
         public String mSongName;
+        public String mSongFileCanonicalName;
         public SimpleExoPlayer mPlayer;
 
-        public SongPlayer(String mSongName, SimpleExoPlayer mPlayer) {
+        public SongPlayer(String mSongName, SimpleExoPlayer mPlayer, String mSongFileCanonicalName) {
             this.mSongName = mSongName;
             this.mPlayer = mPlayer;
+            this.mSongFileCanonicalName = mSongFileCanonicalName;
         }
     }
 
